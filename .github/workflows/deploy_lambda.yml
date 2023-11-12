@@ -28,15 +28,15 @@ jobs:
           # Use git to find the directory that has been modified
           updated_folder=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '/.*\.py$' | sed 's/\/.*\.py$//')
           echo "Updated Lambda Function: $updated_folder"
-          echo "::set-output name=updated_folder::$updated_folder"
+          echo "updated_folder=$updated_folder" >> $GITHUB_ENV
 
       - name: Deploy Updated Lambda Function
-        if: steps.determine_updated_function.outputs.updated_folder != ''
+        if: env.updated_folder != ''
         run: |
-          cd ${{ steps.determine_updated_function.outputs.updated_folder }}
+          cd ${{ env.updated_folder }}
           zip -r lambda-deployment-package.zip .
           aws lambda update-function-code \
-            --function-name ${{ steps.determine_updated_function.outputs.updated_folder }} \
+            --function-name ${{ env.updated_folder }} \
             --zip-file fileb://lambda-deployment-package.zip
           cd ../
 
