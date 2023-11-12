@@ -17,7 +17,7 @@ jobs:
 
       - name: Deploy to Lambda
         run: |
-          zip -r lambda-deployment-package.zip your_code_folder
+          zip -r lambda-deployment-package.zip lambda_backend
           aws lambda update-function-code \
             --function-name test_github_actions \
             --zip-file fileb://lambda-deployment-package.zip
