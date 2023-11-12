@@ -16,14 +16,8 @@ jobs:
       - name: Get functions filenames
         id: getLambdas
         run: |
-          # Get the list of changed files
-          changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-
-          # Filter and format the changed files
-          changed_filenames=$(echo "$changed_files" | grep '\.js$' | awk -F/ '{print $2}' | sort -u)
-
-          echo ::set-output name=lambdas::${changed_filenames}
-
+          lambdas=$(tree -d -L 1 -J . | jq -j -c '.[0].contents | map(.name)')
+          echo ::set-output name=lambdas::${lambdas}
     
   deploy:
     needs: get-filenames
