@@ -28,9 +28,9 @@ jobs:
           # Use git to find the directory that has been modified
           if [ -z "${{ github.event.before }}" ]; then
             # Handle the case where github.event.before is empty (initial commit)
-            updated_folder=$(git ls-tree --name-only -r HEAD | grep '/.*\.py$' | sed 's/\/.*\.py$//')
+            updated_folder=$(ls -d */ | sed 's#/##')
           else
-            updated_folder=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '/.*\.py$' | sed 's/\/.*\.py$//')
+            updated_folder=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
           fi
           echo "Updated Lambda Function: $updated_folder"
           echo "updated_folder=$updated_folder" >> $GITHUB_ENV
