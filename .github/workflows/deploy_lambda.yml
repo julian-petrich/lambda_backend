@@ -1,0 +1,27 @@
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
+
+      - name: Install Dependencies
+        run: |
+          pip install awscli --upgrade --user
+
+      - name: Deploy to Lambda
+        run: |
+          zip -r lambda-deployment-package.zip your_code_folder
+          aws lambda update-function-code \
+            --function-name test_github_actions \
+            --zip-file fileb://lambda-deployment-package.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-2
