@@ -23,28 +23,30 @@ jobs:
           pip install awscli --upgrade --user
 
       - name: Determine Updated Lambda Function
-        id: determine_updated_function
-        run: |
-          # Use git to find the directory that has been modified
-          if [ -z "${{ github.event.before }}" ]; then
-            # Handle the case where github.event.before is empty (initial commit)
-            updated_folder=$(ls -d */ | sed 's#/##')
-          else
-            updated_folder=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
-          fi
-          echo "Updated Lambda Function: $updated_folder"
-          echo "updated_folder=$updated_folder" >> $GITHUB_ENV
+          id: determine_updated_function
+          run: |
+            # Use a script to find the directory that has been modified
+            |
+            #!/bin/bash
+            if [ -z "${{ github.event.before }}" ]; then
+              # Handle the case where github.event.before is empty (initial commit)
+              updated_folder=$(ls -d */ | sed 's#/##')
+            else
+              updated_folder=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
+            fi
+            echo "Updated Lambda Function: $updated_folder"
+            echo "updated_folder=$updated_folder" >> $GITHUB_ENV
 
-      - name: Deploy Updated Lambda Function
-        if: env.updated_folder != ''
-        run: |
-          cd ${{ env.updated_folder }}
-          zip -r lambda-deployment-package.zip .
-          aws lambda update-function-code \
-            --function-name ${{ env.updated_folder }} \
-            --zip-file fileb://lambda-deployment-package.zip
-          cd ../
-
+        - name: Deploy Updated Lambda Function
+          if: env.updated_folder != ''
+          run: |
+            cd ${{ env.updated_folder }}
+            zip -r lambda-deployment-package.zip .
+            aws lambda update-function-code \
+              --function-name ${{ env.updated_folder }} \
+              --zip-file fileb://lambda-deployment-package.zip
+            cd ../
+            
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
