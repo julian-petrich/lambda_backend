@@ -25,13 +25,21 @@ jobs:
       - name: Determine Updated Lambda Function
         id: determine_updated_function
         run: |
+          # Use git to find the directory that has been modified
           if [ "$(git rev-parse ${GITHUB_SHA}^2)" = "4b825dc642cb6eb9a060e54bf8d69288fbee4904" ]; then
             # Initial commit, get all directories
             updated_folder=$(ls -d */ | sed 's#/##')
           else
+            # Get all directories in the current commit
+            all_folders=$(git ls-tree --name-only -r ${GITHUB_SHA} | grep '/.*$' | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
+
             # Get changed directories between the current and previous commit
-            updated_folder=$(git diff --dirstat=files,0 ${GITHUB_SHA}^1 $GITHUB_SHA | grep / | sed 's#/##')
+            changed_folders=$(git diff --name-only ${GITHUB_SHA}^1 $GITHUB_SHA | grep '/.*$' | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
+
+            # Find the intersection of all directories and changed directories
+            updated_folder=$(comm -12 <(echo "$all_folders") <(echo "$changed_folders"))
           fi
+
           echo "Updated Lambda Function: $updated_folder"
           echo "updated_folder=$updated_folder" >> $GITHUB_ENV
 
