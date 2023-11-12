@@ -6,54 +6,67 @@ on:
       - main
 
 jobs:
-  deploy:
+  get-filenames:
     runs-on: ubuntu-latest
-
+    outputs:
+      lambdaArray: ${{ steps.getLambdas.outputs.lambdas }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Get functions filenames
+        id: getLambdas
+        run: |
+          lambdas=$(tree -d -L 1 -J . | jq -j -c '.[0].contents | map(.name)')
+          echo ::set-output name=lambdas::${lambdas}
+    update-code:
+      needs: get-filenames
+      strategy:
+        matrix:
+          lambda: ${{ fromJSON(needs.get-filenames.outputs.lambdaArray) }}
+      runs-on: ubuntu-latest
+
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.11
+      
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
 
       - name: Install AWS CLI
         run: |
           pip install awscli --upgrade --user
 
-      - name: Determine Updated Lambda Function
-        id: determine_updated_function
-        run: |
-          # Use git to find the directory that has been modified
-          if [ -z "${{ github.event.before }}" ]; then
-            # Initial commit, get all directories
-            updated_folder=$(ls -d */ | sed 's#/##')
-          else
-            # Get all directories in the current commit
-            all_folders=$(git ls-tree --name-only -r ${{ github.sha }} | grep '/.*$' | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
+      # - name: Determine Updated Lambda Function
+      #   id: determine_updated_function
+      #   run: |
+      #     # Use git to find the directory that has been modified
+      #     if [ -z "${{ github.event.before }}" ]; then
+      #       # Initial commit, get all directories
+      #       updated_folder=$(ls -d */ | sed 's#/##')
+      #     else
+      #       # Get all directories in the current commit
+      #       all_folders=$(git ls-tree --name-only -r ${{ github.sha }} | grep '/.*$' | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
 
-            # Get changed directories between the current and previous commit
-            changed_folders=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '/.*$' | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
+      #       # Get changed directories between the current and previous commit
+      #       changed_folders=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '/.*$' | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
 
-            # Find the intersection of all directories and changed directories
-            updated_folder=$(comm -12 <(echo "$all_folders") <(echo "$changed_folders"))
-          fi
+      #       # Find the intersection of all directories and changed directories
+      #       updated_folder=$(comm -12 <(echo "$all_folders") <(echo "$changed_folders"))
+      #     fi
 
-          echo "Updated Lambda Function: $updated_folder"
-          echo "updated_folder=$updated_folder" >> $GITHUB_ENV
+      #     echo "Updated Lambda Function: $updated_folder"
+      #     echo "updated_folder=$updated_folder" >> $GITHUB_ENV
 
-      - name: Deploy Updated Lambda Function
-        if: env.updated_folder != ''
-        run: |
-          cd ${{ env.updated_folder }}
-          zip -r lambda-deployment-package.zip .
-          aws lambda update-function-code \
-            --function-name ${{ env.updated_folder }} \
-            --zip-file fileb://lambda-deployment-package.zip
-          cd ../
-            
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-2
+      - name: Zip Lambda functions
+        run: zip -j ${{matrix.lambda}}.zip ./${{matrix.lambda}}/index.js
+      - name: Update Lambdas code
+        run: aws lambda update-function-code --function-name=${{matrix.lambda}}${{inputs.environment}} --zip-file=fileb://${{matrix.lambda}}.zip
