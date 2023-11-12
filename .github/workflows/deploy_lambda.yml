@@ -25,11 +25,7 @@ jobs:
       - name: Determine Updated Lambda Function
         id: determine_updated_function
         run: |
-          # Use a script to find the directory that has been modified
-          |
-          #!/bin/bash
           if [ -z "${{ github.event.before }}" ]; then
-            # Handle the case where github.event.before is empty (initial commit)
             updated_folder=$(ls -d */ | sed 's#/##')
           else
             updated_folder=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | sed -n 's#^\([^/]\+\)/.*$#\1#p' | sort -u)
