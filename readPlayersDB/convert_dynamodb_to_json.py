@@ -26,7 +26,6 @@ def convert_dynamodb_to_json_single_player(dynamodb_data):
                 result[key] = convert_dynamodb_to_json_single_player(value)
         return result
     elif isinstance(dynamodb_data, list):
-        # Test comment add-on another test asd asd
         return [convert_dynamodb_to_json_single_player(item) for item in dynamodb_data]
     else:
         return dynamodb_data
