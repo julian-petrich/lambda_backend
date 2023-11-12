@@ -18,7 +18,8 @@ jobs:
         run: |
           lambdas=$(tree -d -L 1 -J . | jq -j -c '.[0].contents | map(.name)')
           echo ::set-output name=lambdas::${lambdas}
-    update-code:
+    
+    deploy:
       needs: get-filenames
       strategy:
         matrix:
