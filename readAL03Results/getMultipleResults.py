@@ -30,7 +30,6 @@ def getResults(dynamodb, table_name, headers):
         item_list = [{key: list(value.values())[0] for key, value in item.items()} for item in items]
     
         # Convert keys to lowercase in item_list
-        # Add comment
         lowercase_item_list = [{k.lower(): v for k, v in item.items()} for item in item_list]
     
         return {
