@@ -35,15 +35,6 @@ jobs:
       with:
         python-version: 3.11
     
-    - name: Install Snyk
-      run: npm install -g snyk
-
-    - name: Authenticate Snyk
-      run: snyk auth ${{ secrets.SNYK_TOKEN }}
-
-    - name: Run Snyk Security Check
-      run: snyk test
-    
     - name: Get AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -59,6 +50,15 @@ jobs:
       run: zip -j ${{matrix.lambda}}.zip ./${{matrix.lambda}}/*
     - name: Update Lambdas code
       run: aws lambda update-function-code --function-name=${{matrix.lambda}}${{inputs.environment}} --zip-file=fileb://${{matrix.lambda}}.zip
+
+    - name: Install Snyk
+      run: npm install -g snyk
+
+    - name: Authenticate Snyk
+      run: snyk auth ${{ secrets.SNYK_TOKEN }}
+
+    - name: Run Snyk Security Check
+      run: snyk test --file=${{matrix.lambda}}.zip
 
 
       # - name: Determine Updated Lambda Function
